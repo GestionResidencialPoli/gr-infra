@@ -1,0 +1,71 @@
+name: Build y publicar imagen
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        description: "Nombre del repo/imagen (ej. gr-wall-microservice), usado como tag en GHCR"
+        required: true
+        type: string
+      compose-service:
+        description: "Clave del servicio en docker-compose.yml de gr-infra (ej. wall-microservice)"
+        required: true
+        type: string
+      migrate-target:
+        description: "Si el Dockerfile tiene un stage 'migrate' que tambien hay que publicar"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      JENKINS_WEBHOOK_URL:
+        required: true
+      JENKINS_WEBHOOK_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build y push (runtime)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build y push (migrate)
+        if: inputs.migrate-target
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: migrate
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }}:migrate-latest
+            ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }}:migrate-sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Avisar a Jenkins para desplegar
+        run: |
+          curl -sf -X POST "${{ secrets.JENKINS_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"token\":\"${{ secrets.JENKINS_WEBHOOK_TOKEN }}\",\"service\":\"${{ inputs.compose-service }}\",\"migrate\":${{ inputs.migrate-target }}}"
