@@ -66,6 +66,6 @@ jobs:
 
       - name: Avisar a Jenkins para desplegar
         run: |
-          curl -sf -X POST "${{ secrets.JENKINS_WEBHOOK_URL }}" \
+          curl -sf -X POST "${{ secrets.JENKINS_WEBHOOK_URL }}?token=${{ secrets.JENKINS_WEBHOOK_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"token\":\"${{ secrets.JENKINS_WEBHOOK_TOKEN }}\",\"service\":\"${{ inputs.compose-service }}\",\"migrate\":${{ inputs.migrate-target }}}"
+            -d "{\"service\":\"${{ inputs.compose-service }}\",\"migrate\":${{ inputs.migrate-target }}}"
