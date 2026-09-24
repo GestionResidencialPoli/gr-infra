@@ -1,0 +1,27 @@
+# Job de un solo uso: corre las migraciones de gr-wall-microservice.
+# Jenkins lo borra y lo vuelve a crear en cada deploy que involucre a este
+# servicio (los Jobs de k8s son inmutables una vez creados).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wall-migrate
+  namespace: {{ .Values.namespace }}
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: wall-migrate
+          image: "{{ .Values.image.registry }}/gr-wall-microservice:{{ .Values.wallMigrate.image.tag }}"
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: gr_wall_db
+            - name: DB_USERNAME
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_USERNAME } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_PASSWORD } }

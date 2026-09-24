@@ -1,0 +1,51 @@
+# Acceso de Jenkins al cluster: acotado al namespace gr-app, nada de
+# cluster-admin. Jenkins solo puede administrar los recursos que el propio
+# Helm chart de gr-app gestiona.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-deployer
+  namespace: gr-app
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-deployer
+  namespace: gr-app
+rules:
+  - apiGroups: ["", "apps", "batch", "networking.k8s.io"]
+    resources:
+      - pods
+      - pods/log
+      - services
+      - configmaps
+      - secrets
+      - persistentvolumeclaims
+      - deployments
+      - statefulsets
+      - jobs
+      - ingresses
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-deployer
+  namespace: gr-app
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-deployer
+    namespace: gr-app
+roleRef:
+  kind: Role
+  name: jenkins-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jenkins-deployer-token
+  namespace: gr-app
+  annotations:
+    kubernetes.io/service-account.name: jenkins-deployer
+type: kubernetes.io/service-account-token

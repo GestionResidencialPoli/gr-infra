@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-microservice
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: user-microservice }
+  template:
+    metadata:
+      labels: { app: user-microservice }
+    spec:
+      containers:
+        - name: user-microservice
+          image: "{{ .Values.image.registry }}/gr-user-microservice:{{ (index .Values "user-microservice").image.tag }}"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_URL
+              value: "jdbc:postgresql://postgres:5432/gr_user_db"
+            - name: DB_USERNAME
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_USERNAME } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_PASSWORD } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: INTERNAL_SERVICE_TOKEN } }
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
+          resources:
+            requests: { memory: {{ (index .Values "user-microservice").resources.requests.memory }} }
+            limits: { memory: {{ (index .Values "user-microservice").resources.limits.memory }} }
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-microservice
+  namespace: {{ .Values.namespace }}
+spec:
+  selector: { app: user-microservice }
+  ports:
+    - port: 8080

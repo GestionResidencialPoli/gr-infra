@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: gateway }
+  template:
+    metadata:
+      labels: { app: gateway }
+    spec:
+      containers:
+        - name: gateway
+          image: "{{ .Values.image.registry }}/gr-api-gateway:{{ .Values.gateway.image.tag }}"
+          ports:
+            - containerPort: 4000
+          env:
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+            - name: USER_SERVICE_URL
+              value: "http://user-microservice:8080"
+            - name: WALL_SERVICE_URL
+              value: "http://wall-microservice:4100"
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
+          resources:
+            requests: { memory: {{ .Values.gateway.resources.requests.memory }} }
+            limits: { memory: {{ .Values.gateway.resources.limits.memory }} }
+          readinessProbe:
+            httpGet: { path: /health, port: 4000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 4000 }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+---
+# Unico Service del stack expuesto por Ingress. Los demas (postgres, redis,
+# rabbitmq, user-microservice, wall-microservice) no tienen Ingress, asi que
+# no son alcanzables desde afuera del cluster bajo ninguna circunstancia.
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: {{ .Values.namespace }}
+spec:
+  selector: { app: gateway }
+  ports:
+    - port: 4000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway
+  namespace: {{ .Values.namespace }}
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: {{ .Values.gateway.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 4000

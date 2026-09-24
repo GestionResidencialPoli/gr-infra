@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wall-microservice
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: wall-microservice }
+  template:
+    metadata:
+      labels: { app: wall-microservice }
+    spec:
+      containers:
+        - name: wall-microservice
+          image: "{{ .Values.image.registry }}/gr-wall-microservice:{{ (index .Values "wall-microservice").image.tag }}"
+          ports:
+            - containerPort: 4100
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: gr_wall_db
+            - name: DB_USERNAME
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_USERNAME } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_PASSWORD } }
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_USER } }
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_PASS } }
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@rabbitmq:5672"
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: INTERNAL_SERVICE_TOKEN } }
+            - name: USER_SERVICE_URL
+              value: "http://user-microservice:8080"
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
+          resources:
+            requests: { memory: {{ (index .Values "wall-microservice").resources.requests.memory }} }
+            limits: { memory: {{ (index .Values "wall-microservice").resources.limits.memory }} }
+          readinessProbe:
+            httpGet: { path: /health, port: 4100 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 4100 }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wall-microservice
+  namespace: {{ .Values.namespace }}
+spec:
+  selector: { app: wall-microservice }
+  ports:
+    - port: 4100
