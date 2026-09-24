@@ -68,4 +68,4 @@ jobs:
         run: |
           curl -sf -X POST "${{ secrets.JENKINS_WEBHOOK_URL }}?token=${{ secrets.JENKINS_WEBHOOK_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"service\":\"${{ inputs.compose-service }}\",\"migrate\":${{ inputs.migrate-target }}}"
+            -d "{\"service\":\"${{ inputs.compose-service }}\",\"tag\":\"${{ github.sha }}\",\"migrate\":${{ inputs.migrate-target }}}"

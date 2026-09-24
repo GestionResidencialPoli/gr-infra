@@ -24,6 +24,12 @@ RUN apt-get update \
 # que el usuario jenkins pueda usar /var/run/docker.sock sin correr como root.
 RUN groupadd -g 988 docker-host && usermod -aG docker-host jenkins
 
+# kubectl + helm: el deploy real es via Helm contra el k3s del host (el
+# docker-cli de arriba queda solo para diagnostico puntual).
+RUN curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && chmod +x /usr/local/bin/kubectl \
+    && curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
 USER jenkins
 
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
