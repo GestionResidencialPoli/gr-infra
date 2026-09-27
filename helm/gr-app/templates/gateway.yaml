@@ -25,6 +25,10 @@ spec:
               value: "http://user-microservice:8080"
             - name: WALL_SERVICE_URL
               value: "http://wall-microservice:4100"
+            - name: BOOKING_SERVICE_URL
+              value: "http://booking-microservice:4200"
+            - name: GATE_SERVICE_URL
+              value: "http://gate-microservice:4300"
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
           resources:

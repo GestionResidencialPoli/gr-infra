@@ -1,48 +1,49 @@
+{{- $svc := index .Values "gate-microservice" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wall-microservice
+  name: gate-microservice
   namespace: {{ .Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ $svc.replicas }}
   selector:
-    matchLabels: { app: wall-microservice }
+    matchLabels: { app: gate-microservice }
   template:
     metadata:
-      labels: { app: wall-microservice }
+      labels: { app: gate-microservice }
     spec:
       initContainers:
         - name: migrate
-          image: "{{ .Values.image.registry }}/gr-wall-microservice:migrate-{{ (index .Values "wall-microservice").image.tag }}"
+          image: "{{ .Values.image.registry }}/gr-gate-microservice:migrate-{{ $svc.image.tag }}"
           env:
             - name: DB_HOST
               value: postgres
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
-              value: gr_wall_db
+              value: gr_gate_db
             - name: DB_USERNAME
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_USERNAME } }
             - name: DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_PASSWORD } }
       containers:
-        - name: wall-microservice
-          image: "{{ .Values.image.registry }}/gr-wall-microservice:{{ (index .Values "wall-microservice").image.tag }}"
+        - name: gate-microservice
+          image: "{{ .Values.image.registry }}/gr-gate-microservice:{{ $svc.image.tag }}"
           ports:
-            - containerPort: 4100
+            - containerPort: 4300
           env:
+            - name: NODE_ENV
+              value: production
             - name: DB_HOST
               value: postgres
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
-              value: gr_wall_db
+              value: gr_gate_db
             - name: DB_USERNAME
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_USERNAME } }
             - name: DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_PASSWORD } }
-            - name: REDIS_URL
-              value: "redis://redis:6379"
             - name: RABBITMQ_DEFAULT_USER
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_USER } }
             - name: RABBITMQ_DEFAULT_PASS
@@ -58,23 +59,23 @@ spec:
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
           resources:
-            requests: { memory: {{ (index .Values "wall-microservice").resources.requests.memory }} }
-            limits: { memory: {{ (index .Values "wall-microservice").resources.limits.memory }} }
+            requests: { memory: {{ $svc.resources.requests.memory }} }
+            limits: { memory: {{ $svc.resources.limits.memory }} }
           readinessProbe:
-            httpGet: { path: /health, port: 4100 }
-            initialDelaySeconds: 10
+            httpGet: { path: /health/ready, port: 4300 }
+            initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            httpGet: { path: /health, port: 4100 }
-            initialDelaySeconds: 20
+            httpGet: { path: /health, port: 4300 }
+            initialDelaySeconds: 15
             periodSeconds: 15
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: wall-microservice
+  name: gate-microservice
   namespace: {{ .Values.namespace }}
 spec:
-  selector: { app: wall-microservice }
+  selector: { app: gate-microservice }
   ports:
-    - port: 4100
+    - port: 4300

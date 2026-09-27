@@ -43,9 +43,21 @@ wall-microservice:
     requests: { memory: 80Mi }
     limits: { memory: 150Mi }
 
-wallMigrate:
+booking-microservice:
+  replicas: 1
   image:
-    tag: migrate-latest
+    tag: latest
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 160Mi }
+
+gate-microservice:
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 160Mi }
 
 gateway:
   image:

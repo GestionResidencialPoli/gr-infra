@@ -10,8 +10,7 @@ pipeline {
         GenericTrigger(
             genericVariables: [
                 [key: 'SERVICE', value: '$.service'],
-                [key: 'TAG', value: '$.tag'],
-                [key: 'MIGRATE', value: '$.migrate']
+                [key: 'TAG', value: '$.tag']
             ],
             tokenCredentialId: 'gr-deploy-webhook-token',
             causeString: 'Disparado por GitHub Actions para $SERVICE',
@@ -27,18 +26,9 @@ pipeline {
     }
 
     stages {
-        stage('Migraciones') {
-            when { expression { env.MIGRATE == 'true' } }
-            steps {
-                sh 'kubectl delete job wall-migrate -n "$NAMESPACE" --ignore-not-found'
-                sh 'helm upgrade gr-app "$CHART_DIR" -n "$NAMESPACE" --reuse-values --set wallMigrate.image.tag=sha-${TAG}'
-                sh 'kubectl wait --for=condition=complete job/wall-migrate -n "$NAMESPACE" --timeout=180s'
-            }
-        }
-
         stage('Desplegar') {
             steps {
-                sh 'helm upgrade gr-app "$CHART_DIR" -n "$NAMESPACE" --install --reuse-values --set ${SERVICE}.image.tag=sha-${TAG} --wait --timeout 180s'
+                sh 'helm upgrade gr-app "$CHART_DIR" -n "$NAMESPACE" --install --reset-then-reuse-values --set ${SERVICE}.image.tag=sha-${TAG} --wait --timeout 180s'
             }
         }
     }
