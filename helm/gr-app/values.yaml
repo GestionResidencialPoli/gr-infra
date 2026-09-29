@@ -24,7 +24,7 @@ redis:
 rabbitmq:
   image:
     repository: rabbitmq
-    tag: "4-alpine"
+    tag: "3.13-alpine"
   resources:
     requests: { memory: 150Mi }
     limits: { memory: 256Mi }
@@ -58,6 +58,22 @@ gate-microservice:
   resources:
     requests: { memory: 64Mi }
     limits: { memory: 160Mi }
+
+contact-microservice:
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 160Mi }
+
+billing-microservice:
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 180Mi }
 
 gateway:
   image:

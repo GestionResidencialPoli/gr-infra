@@ -1,0 +1,67 @@
+{{- $svc := index .Values "billing-microservice" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-microservice
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels: { app: billing-microservice }
+  template:
+    metadata:
+      labels: { app: billing-microservice }
+    spec:
+      containers:
+        - name: billing-microservice
+          image: "{{ .Values.image.registry }}/gr-billing-microservice:{{ $svc.image.tag }}"
+          ports:
+            - containerPort: 4400
+          env:
+            - name: PORT
+              value: "4400"
+            - name: APP_ENV
+              value: "production"
+            - name: DATABASE_URL
+              value: "postgresql+psycopg://$(DB_USERNAME):$(DB_PASSWORD)@postgres:5432/gr_billing_db"
+            - name: DB_USERNAME
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_USERNAME } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_PASSWORD } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: INTERNAL_SERVICE_TOKEN } }
+            - name: USER_SERVICE_URL
+              value: "http://user-microservice:8080"
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_USER } }
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_PASS } }
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@rabbitmq:5672"
+            - name: BILLING_EVENTS_EXCHANGE
+              value: "gr.finance.events"
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
+          resources:
+            requests: { memory: {{ $svc.resources.requests.memory }} }
+            limits: { memory: {{ $svc.resources.limits.memory }} }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 4400 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 4400 }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing-microservice
+  namespace: {{ .Values.namespace }}
+spec:
+  selector: { app: billing-microservice }
+  ports:
+    - port: 4400
