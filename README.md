@@ -47,6 +47,8 @@ alcanzarlos desde afuera.
 | wall-microservice | gr-wall-microservice (Node) | 4100 | gr_wall_db |
 | booking-microservice | gr-booking-microservice (Node) | 4200 | gr_booking_db |
 | gate-microservice | gr-gate-microservice (Node) | 4300 | gr_gate_db |
+| contact-microservice | gr-contact-microservice (FastAPI) | 4500 | gr_contact_db |
+| billing-microservice | gr-billing-microservice (FastAPI) | 4400 | gr_billing_db |
 | postgres | postgres:16-alpine | 5432 | una instancia, una base por servicio |
 | redis | redis:7-alpine | 6379 | — |
 | rabbitmq | rabbitmq:4-alpine | 5672 | — |
@@ -116,4 +118,4 @@ A eso se suman el plano de control de k3s (unos 640 MB), Jenkins (limitado a 700
 nuevos se escribieron en Node en vez de Spring Boot justamente por este presupuesto: cada uno cabe en 160Mi,
 frente a los ~420Mi de una JVM.
 
-`docker-compose.yml` es el despliegue anterior a k3s; se conserva como referencia y ya no es el mecanismo activo.
+`docker-compose.yml` es el despliegue anterior a k3s; se conserva como referencia y ya no es el mecanismo activo. El Compose de desarrollo integrado vive en `gr-api-gateway/docker-compose.yml` y añade contacto, finanzas y sus dos frontends sin cambiar la topología de producción.
