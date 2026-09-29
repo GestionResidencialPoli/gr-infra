@@ -20,6 +20,8 @@ spec:
           env:
             - name: PORT
               value: "4400"
+            - name: APP_ENV
+              value: "production"
             - name: DATABASE_URL
               value: "postgresql+psycopg://$(DB_USERNAME):$(DB_PASSWORD)@postgres:5432/gr_billing_db"
             - name: DB_USERNAME
@@ -30,6 +32,16 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
             - name: INTERNAL_SERVICE_TOKEN
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: INTERNAL_SERVICE_TOKEN } }
+            - name: USER_SERVICE_URL
+              value: "http://user-microservice:8080"
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_USER } }
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_PASS } }
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@rabbitmq:5672"
+            - name: BILLING_EVENTS_EXCHANGE
+              value: "gr.finance.events"
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
           resources:
