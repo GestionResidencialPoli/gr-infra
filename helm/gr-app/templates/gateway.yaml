@@ -66,7 +66,7 @@ metadata:
   name: gateway
   namespace: {{ .Values.namespace }}
 spec:
-  ingressClassName: traefik
+  ingressClassName: {{ .Values.gateway.ingress.className | default "traefik" }}
   rules:
     - host: {{ .Values.gateway.ingress.host }}
       http:
