@@ -83,3 +83,24 @@ gateway:
     limits: { memory: 150Mi }
   ingress:
     host: api.residencialpoli.online
+
+uis:
+  enabled: false
+  image:
+    registry: ""
+    tag: local
+    pullPolicy: Never
+  ingress:
+    domain: gr.local
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 200Mi }
+  services:
+    common-ui: { port: 3000 }
+    admin-ui: { port: 3001 }
+    auth-ui: { port: 3002 }
+    wall-ui: { port: 3003 }
+    booking-ui: { port: 3004 }
+    gate-ui: { port: 3005 }
+    public-ui: { port: 3006 }
+    billing-ui: { port: 3007 }

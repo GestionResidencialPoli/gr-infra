@@ -22,12 +22,12 @@ spec:
               value: "4400"
             - name: APP_ENV
               value: "production"
-            - name: DATABASE_URL
-              value: "postgresql+psycopg://$(DB_USERNAME):$(DB_PASSWORD)@postgres:5432/gr_billing_db"
             - name: DB_USERNAME
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_USERNAME } }
             - name: DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DB_PASSWORD } }
+            - name: DATABASE_URL
+              value: "postgresql+psycopg://$(DB_USERNAME):$(DB_PASSWORD)@postgres:5432/gr_billing_db"
             - name: JWT_SECRET
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
             - name: INTERNAL_SERVICE_TOKEN

@@ -118,4 +118,17 @@ A eso se suman el plano de control de k3s (unos 640 MB), Jenkins (limitado a 700
 nuevos se escribieron en Node en vez de Spring Boot justamente por este presupuesto: cada uno cabe en 160Mi,
 frente a los ~420Mi de una JVM.
 
-`docker-compose.yml` es el despliegue anterior a k3s; se conserva como referencia y ya no es el mecanismo activo. El Compose de desarrollo integrado vive en `gr-api-gateway/docker-compose.yml` y añade contacto, finanzas y sus dos frontends sin cambiar la topología de producción.
+`docker-compose.yml` es el despliegue anterior a k3s; se conserva como referencia y ya no es el mecanismo activo.
+
+## Entorno local
+
+`docker-compose.local.yml` levanta el stack completo para desarrollo: postgres, redis, rabbitmq, los 6
+microservicios y el gateway (construidos desde el repo hermano de cada uno, `../gr-<repo>`) y las 8 UIs de
+Next.js. Copiar `.env.local.example` a `.env` en este mismo directorio, ajustar los secretos, y:
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+Para probar la misma topología pero sobre Kubernetes real (en vez de Compose) antes de llegar a producción, ver
+`local/README.md` (cluster `kind` + el mismo chart de Helm de `helm/gr-app`, con las UIs habilitadas solo ahí).

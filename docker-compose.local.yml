@@ -1,0 +1,378 @@
+x-ui: &ui
+  restart: unless-stopped
+  depends_on:
+    gateway:
+      condition: service_healthy
+
+x-db-env: &db-env
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_USERNAME: ${DB_USERNAME:-postgres}
+  DB_PASSWORD: ${DB_PASSWORD:-postgres}
+
+x-shared-secrets: &shared-secrets
+  JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en .env}
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?falta INTERNAL_SERVICE_TOKEN en .env}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gr_user_db
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  db-bootstrap:
+    image: postgres:16-alpine
+    entrypoint: ["sh", "-c"]
+    command: ["until pg_isready -h postgres -U $$POSTGRES_USER -d gr_user_db; do sleep 2; done; for db in gr_wall_db gr_booking_db gr_gate_db gr_contact_db gr_billing_db; do PGPASSWORD=$$POSTGRES_PASSWORD createdb -h postgres -U $$POSTGRES_USER $$db 2>/dev/null || true; done"]
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "48mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-gr}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?falta RABBITMQ_DEFAULT_PASS en .env}
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  user-microservice:
+    build: ../gr-user-microservice
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/gr_user_db
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      <<: *shared-secrets
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  wall-migrate:
+    build:
+      context: ../gr-wall-microservice
+      target: migrate
+    environment:
+      <<: *db-env
+      DB_NAME: gr_wall_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  wall-microservice:
+    build: ../gr-wall-microservice
+    restart: unless-stopped
+    environment:
+      <<: [*db-env, *shared-secrets]
+      DB_NAME: gr_wall_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      USER_SERVICE_URL: http://user-microservice:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-microservice:
+        condition: service_healthy
+      wall-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4100/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  booking-migrate:
+    build:
+      context: ../gr-booking-microservice
+      target: migrate
+    environment:
+      <<: *db-env
+      DB_NAME: gr_booking_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  booking-microservice:
+    build: ../gr-booking-microservice
+    restart: unless-stopped
+    environment:
+      <<: [*db-env, *shared-secrets]
+      DB_NAME: gr_booking_db
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      USER_SERVICE_URL: http://user-microservice:8080
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      user-microservice:
+        condition: service_healthy
+      booking-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4200/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  gate-migrate:
+    build:
+      context: ../gr-gate-microservice
+      target: migrate
+    environment:
+      <<: *db-env
+      DB_NAME: gr_gate_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  gate-microservice:
+    build: ../gr-gate-microservice
+    restart: unless-stopped
+    environment:
+      <<: [*db-env, *shared-secrets]
+      DB_NAME: gr_gate_db
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      USER_SERVICE_URL: http://user-microservice:8080
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      user-microservice:
+        condition: service_healthy
+      gate-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4300/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  contact-microservice:
+    build: ../gr-contact-microservice
+    restart: unless-stopped
+    environment:
+      <<: *shared-secrets
+      DATABASE_URL: postgresql+psycopg://${DB_USERNAME:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/gr_contact_db
+      PORT: 4500
+    depends_on:
+      db-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4500/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  billing-microservice:
+    build: ../gr-billing-microservice
+    restart: unless-stopped
+    environment:
+      <<: *shared-secrets
+      DATABASE_URL: postgresql+psycopg://${DB_USERNAME:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/gr_billing_db
+      USER_SERVICE_URL: http://user-microservice:8080
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      BILLING_EVENTS_EXCHANGE: gr.finance.events
+      PORT: 4400
+    depends_on:
+      db-bootstrap:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      user-microservice:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4400/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  gateway:
+    build: ../gr-api-gateway
+    restart: unless-stopped
+    environment:
+      <<: *shared-secrets
+      REDIS_URL: redis://redis:6379
+      USER_SERVICE_URL: http://user-microservice:8080
+      WALL_SERVICE_URL: http://wall-microservice:4100
+      BOOKING_SERVICE_URL: http://booking-microservice:4200
+      GATE_SERVICE_URL: http://gate-microservice:4300
+      CONTACT_SERVICE_URL: http://contact-microservice:4500
+      BILLING_SERVICE_URL: http://billing-microservice:4400
+    ports:
+      - "${GATEWAY_PORT:-4000}:4000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      user-microservice:
+        condition: service_healthy
+      wall-microservice:
+        condition: service_healthy
+      booking-microservice:
+        condition: service_healthy
+      gate-microservice:
+        condition: service_healthy
+      contact-microservice:
+        condition: service_healthy
+      billing-microservice:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  common-ui:
+    <<: *ui
+    build:
+      context: ../gr-common-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+        NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
+        NEXT_PUBLIC_COMMON_UI_URL: http://localhost:3000
+        NEXT_PUBLIC_ADMIN_UI_URL: http://localhost:3001
+        NEXT_PUBLIC_WALL_UI_URL: http://localhost:3003
+        NEXT_PUBLIC_BOOKING_UI_URL: http://localhost:3004
+        NEXT_PUBLIC_GATE_UI_URL: http://localhost:3005
+        NEXT_PUBLIC_BILLING_UI_URL: http://localhost:3007
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3000:3000"]
+
+  admin-ui:
+    <<: *ui
+    build:
+      context: ../gr-admin-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+        NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
+        NEXT_PUBLIC_COMMON_UI_URL: http://localhost:3000
+        NEXT_PUBLIC_WALL_UI_URL: http://localhost:3003
+        NEXT_PUBLIC_BOOKING_UI_URL: http://localhost:3004
+        NEXT_PUBLIC_GATE_UI_URL: http://localhost:3005
+        NEXT_PUBLIC_BILLING_UI_URL: http://localhost:3007
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3001:3001"]
+
+  auth-ui:
+    <<: *ui
+    build:
+      context: ../gr-auth-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+        NEXT_PUBLIC_ADMIN_UI_URL: http://localhost:3001
+        NEXT_PUBLIC_COMMON_UI_URL: http://localhost:3000
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3002:3002"]
+
+  wall-ui:
+    <<: *ui
+    build:
+      context: ../gr-wall-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+        NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3003:3003"]
+
+  booking-ui:
+    <<: *ui
+    build:
+      context: ../gr-booking-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+        NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3004:3004"]
+
+  gate-ui:
+    <<: *ui
+    build:
+      context: ../gr-gate-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+        NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3005:3005"]
+
+  public-ui:
+    <<: *ui
+    build:
+      context: ../gr-public-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3006:3006"]
+
+  billing-ui:
+    <<: *ui
+    build:
+      context: ../gr-billing-ui
+      args:
+        BACKEND_API_URL: http://gateway:4000
+    environment:
+      BACKEND_API_URL: http://gateway:4000
+    ports: ["3007:3007"]
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+    name: gr-local
