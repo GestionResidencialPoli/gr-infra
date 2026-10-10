@@ -279,14 +279,12 @@ services:
       args:
         BACKEND_API_URL: http://gateway:4000
         NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
-        NEXT_PUBLIC_COMMON_UI_URL: http://localhost:3000
-        NEXT_PUBLIC_ADMIN_UI_URL: http://localhost:3001
-        NEXT_PUBLIC_WALL_UI_URL: http://localhost:3003
-        NEXT_PUBLIC_BOOKING_UI_URL: http://localhost:3004
-        NEXT_PUBLIC_GATE_UI_URL: http://localhost:3005
-        NEXT_PUBLIC_BILLING_UI_URL: http://localhost:3007
     environment:
       BACKEND_API_URL: http://gateway:4000
+      WALL_UI_URL: http://localhost:3003
+      BOOKING_UI_URL: http://localhost:3004
+      GATE_UI_URL: http://localhost:3005
+      BILLING_UI_URL: http://localhost:3007
     ports: ["3000:3000"]
 
   admin-ui:
@@ -297,12 +295,12 @@ services:
         BACKEND_API_URL: http://gateway:4000
         NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
         NEXT_PUBLIC_COMMON_UI_URL: http://localhost:3000
-        NEXT_PUBLIC_WALL_UI_URL: http://localhost:3003
-        NEXT_PUBLIC_BOOKING_UI_URL: http://localhost:3004
-        NEXT_PUBLIC_GATE_UI_URL: http://localhost:3005
-        NEXT_PUBLIC_BILLING_UI_URL: http://localhost:3007
     environment:
       BACKEND_API_URL: http://gateway:4000
+      WALL_UI_URL: http://localhost:3003
+      BOOKING_UI_URL: http://localhost:3004
+      GATE_UI_URL: http://localhost:3005
+      BILLING_UI_URL: http://localhost:3007
     ports: ["3001:3001"]
 
   auth-ui:

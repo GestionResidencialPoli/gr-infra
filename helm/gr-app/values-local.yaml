@@ -70,3 +70,16 @@ uis:
     registry: local
     tag: local
     pullPolicy: Never
+  services:
+    common-ui:
+      extraEnv:
+        WALL_UI_URL: "http://wall-ui.gr.local"
+        BOOKING_UI_URL: "http://booking-ui.gr.local"
+        GATE_UI_URL: "http://gate-ui.gr.local"
+        BILLING_UI_URL: "http://billing-ui.gr.local"
+    admin-ui:
+      extraEnv:
+        WALL_UI_URL: "http://wall-ui.gr.local"
+        BOOKING_UI_URL: "http://booking-ui.gr.local"
+        GATE_UI_URL: "http://gate-ui.gr.local"
+        BILLING_UI_URL: "http://billing-ui.gr.local"

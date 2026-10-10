@@ -25,6 +25,10 @@ spec:
               value: "{{ $svc.port }}"
             - name: BACKEND_API_URL
               value: "http://gateway:4000"
+            {{- range $key, $value := $svc.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
           resources:
             requests: { memory: {{ $.Values.uis.resources.requests.memory }} }
             limits: { memory: {{ $.Values.uis.resources.limits.memory }} }
