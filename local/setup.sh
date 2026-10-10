@@ -47,9 +47,9 @@ done
 
 echo "==> Construyendo imagenes de UI (apuntando a *.${DOMAIN})"
 declare -A UI_EXTRA_ARGS=(
-  [gr-admin-ui]="--build-arg NEXT_PUBLIC_AUTH_UI_URL=http://auth-ui.${DOMAIN} --build-arg NEXT_PUBLIC_COMMON_UI_URL=http://common-ui.${DOMAIN} --build-arg NEXT_PUBLIC_WALL_UI_URL=http://wall-ui.${DOMAIN} --build-arg NEXT_PUBLIC_BOOKING_UI_URL=http://booking-ui.${DOMAIN} --build-arg NEXT_PUBLIC_GATE_UI_URL=http://gate-ui.${DOMAIN} --build-arg NEXT_PUBLIC_BILLING_UI_URL=http://billing-ui.${DOMAIN}"
+  [gr-admin-ui]="--build-arg NEXT_PUBLIC_AUTH_UI_URL=http://auth-ui.${DOMAIN}"
   [gr-auth-ui]="--build-arg NEXT_PUBLIC_ADMIN_UI_URL=http://admin-ui.${DOMAIN} --build-arg NEXT_PUBLIC_COMMON_UI_URL=http://common-ui.${DOMAIN}"
-  [gr-common-ui]="--build-arg NEXT_PUBLIC_AUTH_UI_URL=http://auth-ui.${DOMAIN} --build-arg NEXT_PUBLIC_COMMON_UI_URL=http://common-ui.${DOMAIN} --build-arg NEXT_PUBLIC_ADMIN_UI_URL=http://admin-ui.${DOMAIN} --build-arg NEXT_PUBLIC_WALL_UI_URL=http://wall-ui.${DOMAIN} --build-arg NEXT_PUBLIC_BOOKING_UI_URL=http://booking-ui.${DOMAIN} --build-arg NEXT_PUBLIC_GATE_UI_URL=http://gate-ui.${DOMAIN} --build-arg NEXT_PUBLIC_BILLING_UI_URL=http://billing-ui.${DOMAIN}"
+  [gr-common-ui]="--build-arg NEXT_PUBLIC_AUTH_UI_URL=http://auth-ui.${DOMAIN}"
   [gr-wall-ui]="--build-arg NEXT_PUBLIC_AUTH_UI_URL=http://auth-ui.${DOMAIN}"
   [gr-booking-ui]="--build-arg NEXT_PUBLIC_AUTH_UI_URL=http://auth-ui.${DOMAIN}"
   [gr-gate-ui]="--build-arg NEXT_PUBLIC_AUTH_UI_URL=http://auth-ui.${DOMAIN}"
