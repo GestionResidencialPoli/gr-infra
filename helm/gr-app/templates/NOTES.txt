@@ -1,0 +1,16 @@
+gr-app desplegado en el namespace "{{ .Values.namespace }}".
+
+Gateway (unico servicio expuesto por Ingress):
+  https://{{ .Values.gateway.ingress.host }}
+
+Ver el estado de los pods:
+  kubectl get pods -n {{ .Values.namespace }}
+
+Ver logs de un servicio:
+  kubectl logs -n {{ .Values.namespace }} deploy/<nombre-del-servicio> -f
+
+Si un rollout no se completa (Helm --wait expira), revisar el motivo:
+  kubectl describe pod -n {{ .Values.namespace }} -l app=<nombre-del-servicio>
+
+Este chart no crea el namespace ni el Secret "{{ .Values.existingSecret }}": deben existir antes del
+primer "helm install" (ver README.md).

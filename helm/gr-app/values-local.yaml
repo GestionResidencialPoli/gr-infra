@@ -1,0 +1,85 @@
+image:
+  registry: local
+
+existingSecret: gr-app-secrets
+
+postgres:
+  storage: 1Gi
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 256Mi }
+
+redis:
+  resources:
+    requests: { memory: 16Mi }
+    limits: { memory: 64Mi }
+
+rabbitmq:
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 256Mi }
+
+user-microservice:
+  image: { tag: local }
+  resources:
+    requests: { memory: 128Mi }
+    limits: { memory: 512Mi }
+
+wall-microservice:
+  image: { tag: local }
+  resources:
+    requests: { memory: 32Mi }
+    limits: { memory: 160Mi }
+
+booking-microservice:
+  image: { tag: local }
+  resources:
+    requests: { memory: 32Mi }
+    limits: { memory: 160Mi }
+
+gate-microservice:
+  image: { tag: local }
+  resources:
+    requests: { memory: 32Mi }
+    limits: { memory: 160Mi }
+
+contact-microservice:
+  image: { tag: local }
+  resources:
+    requests: { memory: 32Mi }
+    limits: { memory: 160Mi }
+
+billing-microservice:
+  image: { tag: local }
+  resources:
+    requests: { memory: 32Mi }
+    limits: { memory: 200Mi }
+
+gateway:
+  image: { tag: local }
+  resources:
+    requests: { memory: 32Mi }
+    limits: { memory: 160Mi }
+  ingress:
+    host: gateway.gr.local
+    className: nginx
+
+uis:
+  enabled: true
+  image:
+    registry: local
+    tag: local
+    pullPolicy: Never
+  services:
+    common-ui:
+      extraEnv:
+        WALL_UI_URL: "http://wall-ui.gr.local"
+        BOOKING_UI_URL: "http://booking-ui.gr.local"
+        GATE_UI_URL: "http://gate-ui.gr.local"
+        BILLING_UI_URL: "http://billing-ui.gr.local"
+    admin-ui:
+      extraEnv:
+        WALL_UI_URL: "http://wall-ui.gr.local"
+        BOOKING_UI_URL: "http://booking-ui.gr.local"
+        GATE_UI_URL: "http://gate-ui.gr.local"
+        BILLING_UI_URL: "http://billing-ui.gr.local"
