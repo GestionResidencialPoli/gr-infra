@@ -65,6 +65,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Avisar a Jenkins para desplegar
+        continue-on-error: true
         run: |
           curl -sf -X POST "${{ secrets.JENKINS_WEBHOOK_URL }}?token=${{ secrets.JENKINS_WEBHOOK_TOKEN }}" \
             -H "Content-Type: application/json" \
