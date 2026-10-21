@@ -3,6 +3,10 @@
 // del servicio (clave usada en values.yaml del chart de Helm) y el tag de
 // la imagen llegan en el payload del webhook que dispara GitHub Actions al
 // terminar de publicar la imagen en GHCR.
+//
+// El job se define en jenkins/casc.yaml y hace checkout de este mismo repo,
+// asi que el chart que se despliega es siempre el de main (WORKSPACE), sin
+// depender de una copia local en el servidor.
 pipeline {
     agent any
 
@@ -20,15 +24,29 @@ pipeline {
     }
 
     environment {
-        CHART_DIR = '/home/mateodev/gr-infra/helm/gr-app'
         NAMESPACE = 'gr-app'
-        KUBECONFIG = '/home/mateodev/.kube/jenkins-config'
+        // Montado por host/jenkins/docker-compose.yml (ServiceAccount acotado a gr-app).
+        KUBECONFIG = '/var/jenkins_home/.kube/jenkins-config'
     }
 
     stages {
+        // La primera ejecucion (sin payload) solo sirve para que Jenkins registre
+        // el trigger del webhook; no despliega nada.
         stage('Desplegar') {
+            when { expression { env.SERVICE?.trim() && env.TAG?.trim() } }
             steps {
-                sh 'helm upgrade gr-app "$CHART_DIR" -n "$NAMESPACE" --install --reset-then-reuse-values --set ${SERVICE}.image.tag=sha-${TAG} --wait --timeout 180s'
+                sh '''
+                    # Las UIs viven bajo uis.services.<nombre>; el resto bajo <nombre>.
+                    case "$SERVICE" in
+                        *-ui) KEY="uis.services.${SERVICE}.image.tag" ;;
+                        *)    KEY="${SERVICE}.image.tag" ;;
+                    esac
+                    helm upgrade gr-app helm/gr-app -n "$NAMESPACE" --install \
+                        --reset-then-reuse-values \
+                        -f helm/gr-app/values-prod.yaml \
+                        --set "${KEY}=sha-${TAG}" \
+                        --wait --timeout 300s
+                '''
             }
         }
     }

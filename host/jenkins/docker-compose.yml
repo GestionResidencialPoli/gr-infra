@@ -1,0 +1,23 @@
+# Jenkins de gr-infra. Red del host pero escuchando SOLO en 127.0.0.1:8081: no hay
+# puerto accesible desde la LAN; cloudflared (ci.residencialpoli.online) es la unica
+# via de entrada y solo reenvia /generic-webhook-trigger/.
+# Uso: cp .env.example ~/.config/gr-infra/jenkins.env (completarlo) && ./make-kubeconfig.sh &&
+#      docker compose --env-file ~/.config/gr-infra/jenkins.env up -d
+services:
+  jenkins:
+    image: ghcr.io/gestionresidencialpoli/gr-jenkins:latest
+    container_name: gr-jenkins
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      JENKINS_OPTS: "--httpPort=8081 --httpListenAddress=127.0.0.1"
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?definir en .env}
+      WEBHOOK_TOKEN: ${WEBHOOK_TOKEN:?definir en .env}
+    volumes:
+      - gr_jenkins_home:/var/jenkins_home
+      - ${HOME}/.config/gr-infra/jenkins-config:/var/jenkins_home/.kube/jenkins-config:ro
+    deploy:
+      resources:
+        limits: { memory: 1g }
+volumes:
+  gr_jenkins_home:

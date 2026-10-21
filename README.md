@@ -20,12 +20,30 @@ push a main (cualquier repo de servicio)
   cloudflared (ci.residencialpoli.online: solo expone /generic-webhook-trigger)
         |
         v
-  Jenkins (en el homelab)
-    - helm upgrade gr-app --reset-then-reuse-values --set <service>.image.tag=sha-<commit> --wait
+  Jenkins (en el PC de produccion, solo en 127.0.0.1:8081)
+    - helm upgrade gr-app -f values-prod.yaml --reset-then-reuse-values --set <service>.image.tag=sha-<commit> --wait
         |
         v
-  k3s, namespace gr-app (chart helm/gr-app)
+  k3s (un solo nodo), namespace gr-app (chart helm/gr-app)
 ```
+
+Entrada de trafico: el tunel `gr` de cloudflared (servicio systemd en el mismo equipo) lleva
+`api.`, `auth.`, `app.`, `admin.`, `muro.`, `reservas.`, `porteria.`, `finanzas.` y el apex
+`residencialpoli.online` a Traefik, que es un `ClusterIP` fijo (`10.43.0.80`): no hay ningun puerto
+abierto en el host. `ci.residencialpoli.online` llega a Jenkins pero solo la ruta
+`/generic-webhook-trigger/`.
+
+### Puesta en marcha en un equipo nuevo
+
+Todo vive en `host/` (ver los scripts, cada uno documenta lo que hace):
+
+1. `sudo GHCR_USER=... GHCR_PAT=... ./host/install.sh`: k3s, helm, cloudflared y credenciales de GHCR.
+2. `./host/bootstrap.sh`: namespace, RBAC, `gr-app-secrets` (generado en `~/.config/gr-infra/.env`) y primer `helm install`.
+3. `./host/cloudflared/setup.sh`: tunel, DNS y servicio systemd.
+4. `host/jenkins/`: `make-kubeconfig.sh` y `docker compose up -d` (ver el compose).
+
+Las UIs (Next.js) se publican como imagen desde su propio repo y se despliegan igual que el backend:
+la clave del chart es `uis.services.<nombre>-ui.image.tag` y el Jenkinsfile la deduce del sufijo `-ui`.
 
 El homelab **nunca compila nada**. Solo descarga la imagen ya construida y hace
 el rollout. El hardware (i5-3450, 3.7 GiB de RAM) no tiene margen para builds de
@@ -67,7 +85,7 @@ crea ademas su base (`gr_booking_db`, `gr_gate_db`) en el mismo Postgres si toda
 |---|---|---|
 | Credenciales de build (push a GHCR) | `GITHUB_TOKEN` automatico de Actions | Ya tiene permiso `packages:write` |
 | Token del webhook Actions → Jenkins | Secrets de la organizacion (`JENKINS_WEBHOOK_URL`, `JENKINS_WEBHOOK_TOKEN`) + credential `gr-deploy-webhook-token` en Jenkins | Solo sirve para disparar el pipeline, no da acceso a la app |
-| `DB_PASSWORD`, `JWT_SECRET`, `INTERNAL_SERVICE_TOKEN`, RabbitMQ, CORS (runtime) | `/home/mateodev/gr-infra/.env` en el servidor (`chmod 600`), cargado como Secret `gr-app-secrets` con `kubectl create secret generic --from-env-file` | Nunca pasan por GitHub ni por el chart; los pods los leen con `secretKeyRef` |
+| `DB_PASSWORD`, `JWT_SECRET`, `INTERNAL_SERVICE_TOKEN`, RabbitMQ, CORS (runtime) | `~/.config/gr-infra/.env` en el servidor (`chmod 600`), cargado como Secret `gr-app-secrets` con `kubectl create secret generic --from-env-file` | Nunca pasan por GitHub ni por el chart; los pods los leen con `secretKeyRef` |
 
 `.env.example` documenta que variables existen, sin valores reales.
 

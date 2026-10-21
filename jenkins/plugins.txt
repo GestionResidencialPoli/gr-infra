@@ -3,3 +3,5 @@ workflow-aggregator
 git
 credentials-binding
 timestamper
+configuration-as-code
+job-dsl

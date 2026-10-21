@@ -1,0 +1,50 @@
+# Produccion en el k3s de un solo nodo (PC de Mateo). Se aplica ENCIMA de
+# values.yaml: helm upgrade --install gr-app helm/gr-app -f helm/gr-app/values-prod.yaml
+#
+# Una replica de todo. Los tags de imagen los fija Jenkins en cada despliegue
+# (--set <servicio>.image.tag=sha-<commit>) y se conservan con --reset-then-reuse-values.
+#
+# Dominio base: residencialpoli.online. Cada host sale por cloudflared (ver
+# host/README.md); Traefik solo recibe trafico del tunel, nunca de la LAN.
+
+gateway:
+  ingress:
+    host: api.residencialpoli.online
+    className: traefik
+
+uis:
+  enabled: true
+  replicas: 1
+  image:
+    registry: ghcr.io/gestionresidencialpoli
+    tag: latest
+    pullPolicy: Always
+  ingress:
+    className: traefik
+    domain: residencialpoli.online
+  resources:
+    requests: { memory: 96Mi }
+    limits: { memory: 256Mi }
+  services:
+    public-ui:
+      host: residencialpoli.online
+    auth-ui:
+      host: auth.residencialpoli.online
+    common-ui:
+      host: app.residencialpoli.online
+      extraEnv: &moduleUrls
+        WALL_UI_URL: "https://muro.residencialpoli.online"
+        BOOKING_UI_URL: "https://reservas.residencialpoli.online"
+        GATE_UI_URL: "https://porteria.residencialpoli.online"
+        BILLING_UI_URL: "https://finanzas.residencialpoli.online"
+    admin-ui:
+      host: admin.residencialpoli.online
+      extraEnv: *moduleUrls
+    wall-ui:
+      host: muro.residencialpoli.online
+    booking-ui:
+      host: reservas.residencialpoli.online
+    gate-ui:
+      host: porteria.residencialpoli.online
+    billing-ui:
+      host: finanzas.residencialpoli.online
