@@ -17,6 +17,14 @@ user-microservice:
   # vez y lo registra; si los datos ya existen no cambia nada (ON CONFLICT DO NOTHING).
   flywayLocations: "classpath:db/migration,classpath:db/seed-prod"
 
+contact-microservice:
+  # El correo de aviso se omite si faltan SMTP_USER, SMTP_PASSWORD o CONTACT_NOTIFY_TO;
+  # los tres viven en el Secret gr-app-secrets (ver host/README.md), no en el repo.
+  extraEnv:
+    SMTP_HOST: smtp.gmail.com
+    SMTP_PORT: "465"
+    SMTP_FROM_NAME: Habitar
+
 uis:
   enabled: true
   replicas: 1

@@ -21,6 +21,11 @@ on:
         required: false
         type: string
         default: ""
+      public-urls:
+        description: "Añade las URLs publicas de produccion de todas las UIs (NEXT_PUBLIC_*_UI_URL) a los build args. Next.js las incrusta al compilar."
+        required: false
+        type: boolean
+        default: false
     secrets:
       JENKINS_WEBHOOK_URL:
         required: true
@@ -45,12 +50,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Preparar build args
+        id: args
+        env:
+          BUILD_ARGS: ${{ inputs.build-args }}
+          PUBLIC_URLS: ${{ inputs.public-urls }}
+        run: |
+          {
+            echo 'value<<__ARGS__'
+            printf '%s\n' "$BUILD_ARGS" | sed '/^[[:space:]]*$/d'
+            if [ "$PUBLIC_URLS" = "true" ]; then
+              echo NEXT_PUBLIC_AUTH_UI_URL=https://auth.residencialpoli.online
+              echo NEXT_PUBLIC_COMMON_UI_URL=https://app.residencialpoli.online
+              echo NEXT_PUBLIC_ADMIN_UI_URL=https://admin.residencialpoli.online
+              echo NEXT_PUBLIC_WALL_UI_URL=https://muro.residencialpoli.online
+              echo NEXT_PUBLIC_BOOKING_UI_URL=https://reservas.residencialpoli.online
+              echo NEXT_PUBLIC_GATE_UI_URL=https://porteria.residencialpoli.online
+              echo NEXT_PUBLIC_BILLING_UI_URL=https://finanzas.residencialpoli.online
+            fi
+            echo '__ARGS__'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build y push (runtime)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          build-args: ${{ inputs.build-args }}
+          build-args: ${{ steps.args.outputs.value }}
           tags: |
             ghcr.io/gestionresidencialpoli/${{ inputs.service-name }}:latest
             ghcr.io/gestionresidencialpoli/${{ inputs.service-name }}:sha-${{ github.sha }}
