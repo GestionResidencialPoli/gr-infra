@@ -42,6 +42,10 @@ Todo vive en `host/` (ver los scripts, cada uno documenta lo que hace):
 3. `./host/cloudflared/setup.sh`: tunel, DNS y servicio systemd.
 4. `host/jenkins/`: `make-kubeconfig.sh` y `docker compose up -d` (ver el compose).
 
+5. Acceso remoto y cierre de la LAN: `sudo ./host/tailscale.sh` (Tailscale SSH, sin llaves ni puerto 22 abierto) y
+   `sudo ./host/firewall.sh` (ufw: solo loopback, pods, Docker y la tailnet).
+6. Rotar el PAT de GHCR de k3s: `sudo GHCR_USER=... ./host/rotate-ghcr-pat.sh`.
+
 Las UIs (Next.js) se publican como imagen desde su propio repo y se despliegan igual que el backend:
 la clave del chart es `uis.services.<nombre>-ui.image.tag` y el Jenkinsfile la deduce del sufijo `-ui`.
 
