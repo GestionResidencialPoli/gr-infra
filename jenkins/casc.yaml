@@ -45,5 +45,3 @@ jobs:
           }
         }
       }
-      // Una primera ejecucion registra el trigger declarado en el Jenkinsfile.
-      queue('gr-deploy')
