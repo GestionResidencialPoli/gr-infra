@@ -10,7 +10,9 @@ set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Ejecutar con sudo." >&2; exit 1; }
 command -v ufw >/dev/null || apt-get install -y -qq ufw
 
-ufw --force reset >/dev/null
+# No se hace "ufw reset": el equipo puede tener reglas propias (ufw ya estaba activo).
+# Solo se agregan las que faltan; ufw ignora las que ya existen.
+echo "Reglas actuales:"; ufw status numbered || true
 ufw default deny incoming
 ufw default allow outgoing
 ufw default allow routed
