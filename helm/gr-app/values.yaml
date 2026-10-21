@@ -4,6 +4,12 @@ existingSecret: gr-app-secrets
 image:
   registry: ghcr.io/gestionresidencialpoli
 
+placement:
+  backend:
+    nodeSelector: {}
+  frontend:
+    nodeSelector: {}
+
 postgres:
   image:
     repository: postgres
@@ -30,6 +36,7 @@ rabbitmq:
     limits: { memory: 256Mi }
 
 user-microservice:
+  replicas: 1
   image:
     tag: latest
   resources:
@@ -37,6 +44,7 @@ user-microservice:
     limits: { memory: 420Mi }
 
 wall-microservice:
+  replicas: 1
   image:
     tag: latest
   resources:
@@ -76,6 +84,7 @@ billing-microservice:
     limits: { memory: 180Mi }
 
 gateway:
+  replicas: 1
   image:
     tag: latest
   resources:
@@ -86,6 +95,7 @@ gateway:
 
 uis:
   enabled: false
+  replicas: 1
   image:
     registry: ""
     tag: local

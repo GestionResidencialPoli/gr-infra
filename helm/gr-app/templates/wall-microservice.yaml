@@ -4,13 +4,17 @@ metadata:
   name: wall-microservice
   namespace: {{ .Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ (index .Values "wall-microservice").replicas | default 1 }}
   selector:
     matchLabels: { app: wall-microservice }
   template:
     metadata:
       labels: { app: wall-microservice }
     spec:
+      {{- with .Values.placement.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
         - name: migrate
           image: "{{ .Values.image.registry }}/gr-wall-microservice:migrate-{{ (index .Values "wall-microservice").image.tag }}"

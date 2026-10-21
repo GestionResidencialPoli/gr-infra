@@ -12,6 +12,10 @@ spec:
     metadata:
       labels: { app: booking-microservice }
     spec:
+      {{- with .Values.placement.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
         - name: migrate
           image: "{{ .Values.image.registry }}/gr-booking-microservice:migrate-{{ $svc.image.tag }}"

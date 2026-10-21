@@ -12,6 +12,10 @@ spec:
     metadata:
       labels: { app: contact-microservice }
     spec:
+      {{- with .Values.placement.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: contact-microservice
           image: "{{ .Values.image.registry }}/gr-contact-microservice:{{ $svc.image.tag }}"

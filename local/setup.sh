@@ -21,6 +21,10 @@ if ! kind get clusters | grep -qx "$CLUSTER_NAME"; then
   kind create cluster --config "$HERE/kind-cluster.yaml"
 else
   echo "Ya existe el cluster '$CLUSTER_NAME'."
+  if ! kubectl --context "kind-$CLUSTER_NAME" get nodes -l gr-app/role=backend --no-headers | grep -q .; then
+    echo "El cluster existente no tiene los nodos backend/frontend. Ejecutar local/teardown.sh y volver a correr este script." >&2
+    exit 1
+  fi
 fi
 kubectl config use-context "kind-$CLUSTER_NAME"
 
@@ -78,7 +82,11 @@ kubectl create secret generic gr-app-secrets -n gr-app \
 echo "==> helm upgrade --install"
 helm upgrade --install gr-app "$INFRA_DIR/helm/gr-app" -n gr-app \
   -f "$INFRA_DIR/helm/gr-app/values-local.yaml" \
+  -f "$INFRA_DIR/helm/gr-app/values-2nodos.yaml" \
   --wait --timeout 300s
+
+echo "==> Distribucion de pods por nodo"
+kubectl get pods -n gr-app -o wide
 
 cat <<EOF
 
