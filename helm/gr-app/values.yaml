@@ -42,6 +42,7 @@ rabbitmq:
 
 user-microservice:
   replicas: 1
+  env: {}
   image:
     tag: latest
   resources:

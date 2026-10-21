@@ -37,6 +37,10 @@ spec:
             - name: SPRING_FLYWAY_LOCATIONS
               value: {{ . | quote }}
             {{- end }}
+            {{- range $k, $v := (index .Values "user-microservice").env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
           resources:
             requests: { memory: {{ (index .Values "user-microservice").resources.requests.memory }} }
             limits: { memory: {{ (index .Values "user-microservice").resources.limits.memory }} }
