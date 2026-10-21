@@ -7,6 +7,9 @@
 # Dominio base: residencialpoli.online. Cada host sale por cloudflared (ver
 # host/README.md); Traefik solo recibe trafico del tunel, nunca de la LAN.
 
+networkPolicy:
+  enabled: true
+
 gateway:
   ingress:
     host: api.residencialpoli.online
