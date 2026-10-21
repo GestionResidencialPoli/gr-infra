@@ -1,12 +1,34 @@
 #!/usr/bin/env bash
-# Instala Tailscale y habilita Tailscale SSH: acceso por la identidad de la tailnet,
-# sin llaves que repartir y sin abrir el puerto 22 a la LAN ni a internet.
+# Instala Tailscale (solo como red privada) y OpenSSH. El SSH es el sshd normal del
+# sistema, accesible por la IP de la LAN (desde la casa) y por la IP de Tailscale
+# (desde fuera). NO se usa Tailscale SSH.
 # Uso: sudo ./host/tailscale.sh        (abre una URL para autorizar este equipo)
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Ejecutar con sudo." >&2; exit 1; }
 
 HOSTNAME_TS="${TS_HOSTNAME:-gr-prod}"
+TARGET_USER="${SUDO_USER:?Ejecutar con sudo desde tu usuario}"
+TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
 
+echo "==> OpenSSH"
+apt-get install -y -qq openssh-server
+# Endurecimiento: sin root. Solo se desactiva la clave por contrasena si ya hay una llave
+# autorizada, para no dejarte fuera: agregar tu llave publica a ~/.ssh/authorized_keys.
+{
+  echo "PermitRootLogin no"
+  echo "MaxAuthTries 4"
+  if [ -s "$TARGET_HOME/.ssh/authorized_keys" ]; then
+    echo "PasswordAuthentication no"
+    echo "KbdInteractiveAuthentication no"
+  else
+    echo "# PasswordAuthentication sigue activo: no hay llaves en $TARGET_HOME/.ssh/authorized_keys"
+  fi
+} > /etc/ssh/sshd_config.d/10-gr.conf
+sshd -t
+systemctl enable --now ssh
+systemctl reload ssh
+
+echo "==> Tailscale"
 if ! command -v tailscale >/dev/null; then
   . /etc/os-release
   install -d -m 755 /usr/share/keyrings
@@ -16,13 +38,12 @@ if ! command -v tailscale >/dev/null; then
   apt-get install -y -qq tailscale
 fi
 systemctl enable --now tailscaled
+# --accept-dns=false: no tocar el DNS del equipo (afectaria a k3s y Docker).
+tailscale up --hostname="$HOSTNAME_TS" --accept-dns=false
 
-# --ssh: tailscaled atiende el SSH solo en la interfaz de la tailnet.
-# El DNS de la tailnet no se toca (--accept-dns=false) para no afectar a k3s ni a Docker.
-tailscale up --ssh --hostname="$HOSTNAME_TS" --accept-dns=false
-
+LAN_IP="$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')"
+TS_IP="$(tailscale ip -4 | head -1)"
 echo
-tailscale status | head -5
-echo
-echo "Desde otro equipo de tu tailnet:  ssh $(logname 2>/dev/null || echo "$SUDO_USER")@${HOSTNAME_TS}"
-echo "Las reglas de quien puede entrar se administran en https://login.tailscale.com/admin/acls"
+echo "Desde casa (LAN):   ssh $TARGET_USER@$LAN_IP"
+echo "Desde cualquier lugar (Tailscale, el otro equipo debe estar en tu tailnet):   ssh $TARGET_USER@$TS_IP   o   ssh $TARGET_USER@$HOSTNAME_TS"
+[ -s "$TARGET_HOME/.ssh/authorized_keys" ] || echo "AVISO: sin llaves autorizadas; desde el otro equipo ejecuta  ssh-copy-id $TARGET_USER@$LAN_IP  y luego vuelve a correr este script para desactivar la contrasena."
