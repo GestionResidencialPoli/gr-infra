@@ -1,0 +1,17 @@
+# Traefik como ClusterIP fija: nada escucha en los puertos 80/443 del host ni de
+# la LAN. Solo cloudflared (que corre en este mismo equipo) llega a 10.43.0.80.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      type: ClusterIP
+      spec:
+        clusterIP: 10.43.0.80
+    ports:
+      websecure:
+        expose:
+          default: false

@@ -20,7 +20,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $name }}
-          image: "{{ $.Values.uis.image.registry }}/gr-{{ $name }}:{{ $.Values.uis.image.tag }}"
+          image: "{{ $.Values.uis.image.registry }}/gr-{{ $name }}:{{ dig "image" "tag" $.Values.uis.image.tag $svc }}"
           imagePullPolicy: {{ $.Values.uis.image.pullPolicy }}
           ports:
             - containerPort: {{ $svc.port }}
@@ -61,9 +61,9 @@ metadata:
   name: {{ $name }}
   namespace: {{ $.Values.namespace }}
 spec:
-  ingressClassName: nginx
+  ingressClassName: {{ $.Values.uis.ingress.className | default "nginx" }}
   rules:
-    - host: {{ $name }}.{{ $.Values.uis.ingress.domain }}
+    - host: {{ $svc.host | default (printf "%s.%s" $name $.Values.uis.ingress.domain) }}
       http:
         paths:
           - path: /
