@@ -12,6 +12,11 @@ gateway:
     host: api.residencialpoli.online
     className: traefik
 
+user-microservice:
+  # Datos semilla de demostracion (usuarios, apartamentos). Flyway aplica V902 una sola
+  # vez y lo registra; si los datos ya existen no cambia nada (ON CONFLICT DO NOTHING).
+  flywayLocations: "classpath:db/migration,classpath:db/seed-prod"
+
 uis:
   enabled: true
   replicas: 1

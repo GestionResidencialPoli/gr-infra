@@ -33,6 +33,10 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: INTERNAL_SERVICE_TOKEN } }
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
+            {{- with (index .Values "user-microservice").flywayLocations }}
+            - name: SPRING_FLYWAY_LOCATIONS
+              value: {{ . | quote }}
+            {{- end }}
           resources:
             requests: { memory: {{ (index .Values "user-microservice").resources.requests.memory }} }
             limits: { memory: {{ (index .Values "user-microservice").resources.limits.memory }} }
