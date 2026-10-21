@@ -34,6 +34,14 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
+            {{- range $key, $value := $svc.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key := list "SMTP_USER" "SMTP_PASSWORD" "CONTACT_NOTIFY_TO" }}
+            - name: {{ $key }}
+              valueFrom: { secretKeyRef: { name: {{ $.Values.existingSecret }}, key: {{ $key }}, optional: true } }
+            {{- end }}
           resources:
             requests: { memory: {{ $svc.resources.requests.memory }} }
             limits: { memory: {{ $svc.resources.limits.memory }} }

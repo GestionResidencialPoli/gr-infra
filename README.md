@@ -153,3 +153,15 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Para probar la misma topología pero sobre Kubernetes real (en vez de Compose) antes de llegar a producción, ver
 `local/README.md` (cluster `kind` + el mismo chart de Helm de `helm/gr-app`, con las UIs habilitadas solo ahí).
+
+## Correo del servicio de contacto
+
+`contact-microservice` envía un correo por cada solicitud nueva solo si tiene `SMTP_USER`, `SMTP_PASSWORD` (contraseña de aplicación de Gmail) y `CONTACT_NOTIFY_TO`. Si faltan, la solicitud se guarda igual y el aviso se omite. Los tres se leen del Secret `gr-app-secrets` (opcionales); host, puerto y nombre del remitente están en `helm/gr-app/values-prod.yaml`.
+
+```bash
+kubectl -n gr-app patch secret gr-app-secrets --type merge -p \
+  "{\"stringData\":{\"SMTP_USER\":\"correo@gmail.com\",\"SMTP_PASSWORD\":\"xxxx xxxx xxxx xxxx\",\"CONTACT_NOTIFY_TO\":\"destino@ejemplo.com\"}}"
+kubectl -n gr-app rollout restart deploy/contact-microservice
+```
+
+Para que sobrevivan a un `bootstrap.sh`, agregar las mismas tres líneas a `~/.config/gr-infra/.env`.
