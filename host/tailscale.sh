@@ -43,9 +43,7 @@ systemctl enable --now tailscaled
 # --accept-dns=false: no tocar el DNS del equipo (afectaria a k3s y Docker).
 tailscale up --hostname="$HOSTNAME_TS" --accept-dns=false
 
-LAN_IP="$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')"
 TS_IP="$(tailscale ip -4 | head -1)"
 echo
-echo "Desde casa (LAN):   ssh $TARGET_USER@$LAN_IP"
-echo "Desde cualquier lugar (Tailscale, el otro equipo debe estar en tu tailnet):   ssh $TARGET_USER@$TS_IP   o   ssh $TARGET_USER@$HOSTNAME_TS"
-[ -s "$TARGET_HOME/.ssh/authorized_keys" ] || echo "AVISO: sin llaves autorizadas; desde el otro equipo ejecuta  ssh-copy-id $TARGET_USER@$LAN_IP  y luego vuelve a correr este script para desactivar la contrasena."
+echo "Por Tailscale:   ssh $TARGET_USER@$TS_IP   o   ssh $TARGET_USER@$HOSTNAME_TS"
+[ -s "$TARGET_HOME/.ssh/authorized_keys" ] || echo "AVISO: sin llaves autorizadas; desde el otro equipo ejecuta  ssh-copy-id $TARGET_USER@$HOSTNAME_TS  y luego vuelve a correr este script para desactivar la contrasena."
