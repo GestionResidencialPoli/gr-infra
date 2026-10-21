@@ -1,6 +1,11 @@
 namespace: gr-app
 existingSecret: gr-app-secrets
 
+# Aislamiento de red entre pods (ver templates/network-policies.yaml). Apagado por defecto
+# porque el CNI de otros entornos puede no aplicarlas; produccion lo enciende.
+networkPolicy:
+  enabled: false
+
 image:
   registry: ghcr.io/gestionresidencialpoli
 
