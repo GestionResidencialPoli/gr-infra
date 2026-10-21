@@ -6,7 +6,7 @@
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Ejecutar con sudo." >&2; exit 1; }
 
-HOSTNAME_TS="${TS_HOSTNAME:-gr-prod}"
+HOSTNAME_TS="${TS_HOSTNAME:-mateo-desktop-ubuntu}"
 TARGET_USER="${SUDO_USER:?Ejecutar con sudo desde tu usuario}"
 TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
 
