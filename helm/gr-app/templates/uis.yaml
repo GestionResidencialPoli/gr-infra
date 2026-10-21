@@ -7,13 +7,17 @@ metadata:
   name: {{ $name }}
   namespace: {{ $.Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ $.Values.uis.replicas | default 1 }}
   selector:
     matchLabels: { app: {{ $name }} }
   template:
     metadata:
       labels: { app: {{ $name }} }
     spec:
+      {{- with $.Values.placement.frontend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ $name }}
           image: "{{ $.Values.uis.image.registry }}/gr-{{ $name }}:{{ $.Values.uis.image.tag }}"

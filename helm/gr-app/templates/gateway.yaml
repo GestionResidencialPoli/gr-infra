@@ -4,13 +4,17 @@ metadata:
   name: gateway
   namespace: {{ .Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ (index .Values "gateway").replicas | default 1 }}
   selector:
     matchLabels: { app: gateway }
   template:
     metadata:
       labels: { app: gateway }
     spec:
+      {{- with .Values.placement.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: gateway
           image: "{{ .Values.image.registry }}/gr-api-gateway:{{ .Values.gateway.image.tag }}"

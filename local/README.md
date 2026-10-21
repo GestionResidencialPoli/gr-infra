@@ -17,6 +17,34 @@ migraciones como initContainer) antes de que un cambio llegue al k3s real.
 brew install kind kubectl helm
 ```
 
+## Topologia: 2 nodos y 2 replicas
+
+El cluster kind tiene el control-plane (ingress-nginx y los puertos 80/443) y dos nodos de trabajo
+etiquetados:
+
+| Nodo (label) | Carga |
+|---|---|
+| `gr-app/role=backend` | gateway, user, wall, booking, gate, contact y billing, mas postgres, redis y rabbitmq |
+| `gr-app/role=frontend` | las 8 UIs |
+
+`helm/gr-app/values-2nodos.yaml` fija cada carga a su nodo con `nodeSelector` y sube a 2 las replicas
+de los servicios de aplicacion y de las UIs. Postgres, redis y rabbitmq siguen en 1 replica.
+`setup.sh` lo aplica junto con `values-local.yaml`.
+
+Verificar la distribucion:
+
+```bash
+kubectl get pods -n gr-app -o wide
+kubectl get nodes -L gr-app/role
+```
+
+Si el cluster `gr-local` ya existia con un solo nodo, ejecutar `./teardown.sh` antes de `./setup.sh`.
+
+Sin `values-2nodos.yaml` el chart se comporta como antes (1 replica, sin `nodeSelector`), que es lo que
+usa el k3s de un solo nodo. Para usar la misma topologia en un cluster real, etiquetar los nodos
+(`kubectl label node <nodo> gr-app/role=backend` y `gr-app/role=frontend`) y pasar
+`-f helm/gr-app/values-2nodos.yaml` a `helm upgrade`.
+
 ## Uso
 
 ```bash

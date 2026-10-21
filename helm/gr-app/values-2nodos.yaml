@@ -1,0 +1,31 @@
+placement:
+  backend:
+    nodeSelector:
+      gr-app/role: backend
+  frontend:
+    nodeSelector:
+      gr-app/role: frontend
+
+user-microservice:
+  replicas: 2
+
+wall-microservice:
+  replicas: 2
+
+booking-microservice:
+  replicas: 2
+
+gate-microservice:
+  replicas: 2
+
+contact-microservice:
+  replicas: 2
+
+billing-microservice:
+  replicas: 2
+
+gateway:
+  replicas: 2
+
+uis:
+  replicas: 2

@@ -4,13 +4,17 @@ metadata:
   name: user-microservice
   namespace: {{ .Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ (index .Values "user-microservice").replicas | default 1 }}
   selector:
     matchLabels: { app: user-microservice }
   template:
     metadata:
       labels: { app: user-microservice }
     spec:
+      {{- with .Values.placement.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: user-microservice
           image: "{{ .Values.image.registry }}/gr-user-microservice:{{ (index .Values "user-microservice").image.tag }}"
