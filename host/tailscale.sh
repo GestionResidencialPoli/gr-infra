@@ -24,6 +24,8 @@ apt-get install -y -qq openssh-server
     echo "# PasswordAuthentication sigue activo: no hay llaves en $TARGET_HOME/.ssh/authorized_keys"
   fi
 } > /etc/ssh/sshd_config.d/10-gr.conf
+# /run/sshd lo crea el servicio al arrancar; sshd -t lo necesita antes de que arranque.
+install -d -m 0755 /run/sshd
 sshd -t
 systemctl enable --now ssh
 systemctl reload ssh
