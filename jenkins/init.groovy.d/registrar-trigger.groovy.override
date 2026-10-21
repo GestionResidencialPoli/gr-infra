@@ -1,0 +1,18 @@
+// El trigger del webhook se declara en el Jenkinsfile y Jenkins solo lo registra
+// tras una ejecucion del job. JCasC recrea el job en cada arranque, asi que sin
+// esto el webhook responde "Did not find any jobs with GenericTrigger configured"
+// hasta que alguien lance el job a mano. Este hook corre despues de que JCasC
+// crea el job; encola una ejecucion sin payload (la etapa de despliegue se omite).
+import jenkins.model.Jenkins
+import hudson.model.Cause
+import hudson.model.CauseAction
+import java.util.logging.Logger
+
+def log = Logger.getLogger('registrar-trigger')
+def job = Jenkins.get().getItemByFullName('gr-deploy')
+if (job == null) {
+    log.warning('gr-deploy no existe; no se registra el trigger')
+} else {
+    job.scheduleBuild2(0, new CauseAction(new Cause.RemoteCause('init', 'registrar trigger del webhook')))
+    log.info('Build inicial de gr-deploy encolado para registrar el trigger')
+}
