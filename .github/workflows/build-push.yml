@@ -22,10 +22,15 @@ on:
         type: string
         default: ""
       public-urls:
-        description: "Añade las URLs publicas de produccion de todas las UIs (NEXT_PUBLIC_*_UI_URL) a los build args. Next.js las incrusta al compilar."
+        description: "Añade las URLs publicas de todas las UIs (NEXT_PUBLIC_*_UI_URL) a los build args, derivadas de base-domain. Next.js las incrusta al compilar."
         required: false
         type: boolean
         default: false
+      base-domain:
+        description: "Dominio base de produccion; de el salen los subdominios de cada UI (auth., app., admin., muro., reservas., porteria., finanzas.)"
+        required: false
+        type: string
+        default: "residencialpoli.online"
     secrets:
       JENKINS_WEBHOOK_URL:
         required: true
@@ -55,18 +60,19 @@ jobs:
         env:
           BUILD_ARGS: ${{ inputs.build-args }}
           PUBLIC_URLS: ${{ inputs.public-urls }}
+          BASE_DOMAIN: ${{ inputs.base-domain }}
         run: |
           {
             echo 'value<<__ARGS__'
             printf '%s\n' "$BUILD_ARGS" | sed '/^[[:space:]]*$/d'
             if [ "$PUBLIC_URLS" = "true" ]; then
-              echo NEXT_PUBLIC_AUTH_UI_URL=https://auth.residencialpoli.online
-              echo NEXT_PUBLIC_COMMON_UI_URL=https://app.residencialpoli.online
-              echo NEXT_PUBLIC_ADMIN_UI_URL=https://admin.residencialpoli.online
-              echo NEXT_PUBLIC_WALL_UI_URL=https://muro.residencialpoli.online
-              echo NEXT_PUBLIC_BOOKING_UI_URL=https://reservas.residencialpoli.online
-              echo NEXT_PUBLIC_GATE_UI_URL=https://porteria.residencialpoli.online
-              echo NEXT_PUBLIC_BILLING_UI_URL=https://finanzas.residencialpoli.online
+              echo "NEXT_PUBLIC_AUTH_UI_URL=https://auth.$BASE_DOMAIN"
+              echo "NEXT_PUBLIC_COMMON_UI_URL=https://app.$BASE_DOMAIN"
+              echo "NEXT_PUBLIC_ADMIN_UI_URL=https://admin.$BASE_DOMAIN"
+              echo "NEXT_PUBLIC_WALL_UI_URL=https://muro.$BASE_DOMAIN"
+              echo "NEXT_PUBLIC_BOOKING_UI_URL=https://reservas.$BASE_DOMAIN"
+              echo "NEXT_PUBLIC_GATE_UI_URL=https://porteria.$BASE_DOMAIN"
+              echo "NEXT_PUBLIC_BILLING_UI_URL=https://finanzas.$BASE_DOMAIN"
             fi
             echo '__ARGS__'
           } >> "$GITHUB_OUTPUT"
