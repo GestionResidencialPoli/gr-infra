@@ -23,6 +23,7 @@ DB_PASSWORD=$(rnd 24)
 RABBITMQ_DEFAULT_USER=gr_rabbit
 RABBITMQ_DEFAULT_PASS=$(rnd 24)
 JWT_SECRET=$(rnd 32)
+JWT_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
 INTERNAL_SERVICE_TOKEN=$(rnd 32)
 CORS_ALLOWED_ORIGINS=https://residencialpoli.online,https://auth.residencialpoli.online,https://app.residencialpoli.online,https://admin.residencialpoli.online,https://muro.residencialpoli.online,https://reservas.residencialpoli.online,https://porteria.residencialpoli.online,https://finanzas.residencialpoli.online
 ENV

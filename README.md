@@ -88,9 +88,18 @@ crea ademas su base (`gr_booking_db`, `gr_gate_db`) en el mismo Postgres si toda
 |---|---|---|
 | Credenciales de build (push a GHCR) | `GITHUB_TOKEN` automatico de Actions | Ya tiene permiso `packages:write` |
 | Token del webhook Actions → Jenkins | Secrets de la organizacion (`JENKINS_WEBHOOK_URL`, `JENKINS_WEBHOOK_TOKEN`) + credential `gr-deploy-webhook-token` en Jenkins | Solo sirve para disparar el pipeline, no da acceso a la app |
-| `DB_PASSWORD`, `JWT_SECRET`, `INTERNAL_SERVICE_TOKEN`, RabbitMQ, CORS (runtime) | `~/.config/gr-infra/.env` en el servidor (`chmod 600`), cargado como Secret `gr-app-secrets` con `kubectl create secret generic --from-env-file` | Nunca pasan por GitHub ni por el chart; los pods los leen con `secretKeyRef` |
+| `DB_PASSWORD`, `JWT_SECRET`, `JWT_ENCRYPTION_KEY`, `INTERNAL_SERVICE_TOKEN`, RabbitMQ, CORS (runtime) | `~/.config/gr-infra/.env` en el servidor (`chmod 600`), cargado como Secret `gr-app-secrets` con `kubectl create secret generic --from-env-file` | Nunca pasan por GitHub ni por el chart; los pods los leen con `secretKeyRef` |
 
 `.env.example` documenta que variables existen, sin valores reales.
+
+`JWT_ENCRYPTION_KEY` (GR-192) es la clave AES-256 con la que `gr-user-microservice` cifra el access token ya firmado
+(JWE `dir` + `A256GCM`); todos los servicios que validan el token la necesitan y no arrancan sin ella. `bootstrap.sh`
+la genera en servidores nuevos. En un servidor que ya tiene `~/.config/gr-infra/.env`, hay que agregarla a mano antes
+de desplegar y recrear el Secret:
+
+```bash
+echo "JWT_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')" >> ~/.config/gr-infra/.env
+```
 
 ## Como agregar un servicio nuevo
 
@@ -149,6 +158,29 @@ Next.js. Copiar `.env.local.example` a `.env` en este mismo directorio, ajustar 
 
 ```bash
 docker compose -f docker-compose.local.yml up -d --build
+```
+
+### nginx: el backend bajo la URL de cada frontend
+
+Las UIs no publican puertos propios: `nginx` (`nginx/nginx.conf`) es el único punto de entrada y escucha en
+3000–3007. Cada puerto es un `server` que sirve su UI en `/` y, bajo esa misma URL, reenvía el backend:
+
+| Ruta en `http://localhost:300X` | Destino | Notas |
+|---|---|---|
+| `/` | la UI de ese puerto (`common-ui:3000`, `admin-ui:3001`, …) | |
+| `/api/` | `gateway:4000` | incluye el upgrade WebSocket (`/api/v1/publicaciones/eventos/ws`) y SSE sin buffering |
+| `/graphql` | `gateway:4000/api/v1/finanzas/graphql` | GraphQL de finanzas; requiere sesión de administración y `X-XSRF-TOKEN` |
+
+Así el navegador habla con un solo origen: las cookies `SameSite=Strict` viajan sin problemas y el WebSocket de
+notificaciones se abre en `ws://localhost:300X/...` en vez de apuntar al gateway por otro puerto. nginx quita
+`Origin` y `Referer` de lo que manda al backend, igual que el `proxy.ts` de las UIs, porque para el navegador la
+petición ya es del mismo origen. Los bloques `/api/` y `/graphql` viven en `nginx/backend-locations.conf` y se
+incluyen en cada `server`. El gateway sigue publicado en `:4000` solo para depurar con `curl`.
+
+```bash
+curl -s http://localhost:3000/api/v1/auth/csrf -c cookies.txt
+curl -s http://localhost:3001/graphql -b cookies.txt -H "X-XSRF-TOKEN: ..." \
+  -H 'Content-Type: application/json' -d '{"query":"{ cartera { totalPendiente } }"}'
 ```
 
 Para probar la misma topología pero sobre Kubernetes real (en vez de Compose) antes de llegar a producción, ver

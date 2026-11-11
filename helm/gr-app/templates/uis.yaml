@@ -66,6 +66,13 @@ spec:
     - host: {{ $svc.host | default (printf "%s.%s" $name $.Values.uis.ingress.domain) }}
       http:
         paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 4000
           - path: /
             pathType: Prefix
             backend:
@@ -73,5 +80,26 @@ spec:
                 name: {{ $name }}
                 port:
                   number: {{ $svc.port }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}-graphql
+  namespace: {{ $.Values.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /api/v1/finanzas/graphql
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ $name }}.{{ $.Values.uis.ingress.domain }}
+      http:
+        paths:
+          - path: /graphql
+            pathType: Exact
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 4000
 {{- end }}
 {{- end }}
