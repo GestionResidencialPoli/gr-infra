@@ -67,6 +67,10 @@ Al terminar, agregar a `/etc/hosts` (el script imprime la línea exacta):
 
 Y abrir `http://common-ui.gr.local` (o cualquiera de las otras UIs).
 
+Igual que nginx en el compose local, el Ingress de cada UI enruta `/api` al servicio `gateway` (ingress-nginx
+reenvía el upgrade WebSocket sin configuración extra) y `/graphql` a `/api/v1/finanzas/graphql`, de modo que
+el backend vive bajo la misma URL de cada frontend (`http://wall-ui.gr.local/api/...`).
+
 ## Verificar
 
 ```bash

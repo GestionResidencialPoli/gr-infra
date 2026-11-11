@@ -160,5 +160,28 @@ Next.js. Copiar `.env.local.example` a `.env` en este mismo directorio, ajustar 
 docker compose -f docker-compose.local.yml up -d --build
 ```
 
+### nginx: el backend bajo la URL de cada frontend
+
+Las UIs no publican puertos propios: `nginx` (`nginx/nginx.conf`) es el único punto de entrada y escucha en
+3000–3007. Cada puerto es un `server` que sirve su UI en `/` y, bajo esa misma URL, reenvía el backend:
+
+| Ruta en `http://localhost:300X` | Destino | Notas |
+|---|---|---|
+| `/` | la UI de ese puerto (`common-ui:3000`, `admin-ui:3001`, …) | |
+| `/api/` | `gateway:4000` | incluye el upgrade WebSocket (`/api/v1/publicaciones/eventos/ws`) y SSE sin buffering |
+| `/graphql` | `gateway:4000/api/v1/finanzas/graphql` | GraphQL de finanzas; requiere sesión de administración y `X-XSRF-TOKEN` |
+
+Así el navegador habla con un solo origen: las cookies `SameSite=Strict` viajan sin problemas y el WebSocket de
+notificaciones se abre en `ws://localhost:300X/...` en vez de apuntar al gateway por otro puerto. nginx quita
+`Origin` y `Referer` de lo que manda al backend, igual que el `proxy.ts` de las UIs, porque para el navegador la
+petición ya es del mismo origen. Los bloques `/api/` y `/graphql` viven en `nginx/backend-locations.conf` y se
+incluyen en cada `server`. El gateway sigue publicado en `:4000` solo para depurar con `curl`.
+
+```bash
+curl -s http://localhost:3000/api/v1/auth/csrf -c cookies.txt
+curl -s http://localhost:3001/graphql -b cookies.txt -H "X-XSRF-TOKEN: ..." \
+  -H 'Content-Type: application/json' -d '{"query":"{ cartera { totalPendiente } }"}'
+```
+
 Para probar la misma topología pero sobre Kubernetes real (en vez de Compose) antes de llegar a producción, ver
 `local/README.md` (cluster `kind` + el mismo chart de Helm de `helm/gr-app`, con las UIs habilitadas solo ahí).
