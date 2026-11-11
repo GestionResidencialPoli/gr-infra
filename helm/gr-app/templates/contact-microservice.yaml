@@ -32,6 +32,8 @@ spec:
               value: "postgresql+psycopg://$(DB_USERNAME):$(DB_PASSWORD)@postgres:5432/gr_contact_db"
             - name: JWT_SECRET
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_SECRET } }
+            - name: JWT_ENCRYPTION_KEY
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_ENCRYPTION_KEY } }
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
           resources:

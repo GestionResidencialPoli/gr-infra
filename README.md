@@ -88,9 +88,18 @@ crea ademas su base (`gr_booking_db`, `gr_gate_db`) en el mismo Postgres si toda
 |---|---|---|
 | Credenciales de build (push a GHCR) | `GITHUB_TOKEN` automatico de Actions | Ya tiene permiso `packages:write` |
 | Token del webhook Actions → Jenkins | Secrets de la organizacion (`JENKINS_WEBHOOK_URL`, `JENKINS_WEBHOOK_TOKEN`) + credential `gr-deploy-webhook-token` en Jenkins | Solo sirve para disparar el pipeline, no da acceso a la app |
-| `DB_PASSWORD`, `JWT_SECRET`, `INTERNAL_SERVICE_TOKEN`, RabbitMQ, CORS (runtime) | `~/.config/gr-infra/.env` en el servidor (`chmod 600`), cargado como Secret `gr-app-secrets` con `kubectl create secret generic --from-env-file` | Nunca pasan por GitHub ni por el chart; los pods los leen con `secretKeyRef` |
+| `DB_PASSWORD`, `JWT_SECRET`, `JWT_ENCRYPTION_KEY`, `INTERNAL_SERVICE_TOKEN`, RabbitMQ, CORS (runtime) | `~/.config/gr-infra/.env` en el servidor (`chmod 600`), cargado como Secret `gr-app-secrets` con `kubectl create secret generic --from-env-file` | Nunca pasan por GitHub ni por el chart; los pods los leen con `secretKeyRef` |
 
 `.env.example` documenta que variables existen, sin valores reales.
+
+`JWT_ENCRYPTION_KEY` (GR-192) es la clave AES-256 con la que `gr-user-microservice` cifra el access token ya firmado
+(JWE `dir` + `A256GCM`); todos los servicios que validan el token la necesitan y no arrancan sin ella. `bootstrap.sh`
+la genera en servidores nuevos. En un servidor que ya tiene `~/.config/gr-infra/.env`, hay que agregarla a mano antes
+de desplegar y recrear el Secret:
+
+```bash
+echo "JWT_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')" >> ~/.config/gr-infra/.env
+```
 
 ## Como agregar un servicio nuevo
 
