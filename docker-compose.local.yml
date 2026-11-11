@@ -286,7 +286,7 @@ services:
       BOOKING_UI_URL: http://localhost:3004
       GATE_UI_URL: http://localhost:3005
       BILLING_UI_URL: http://localhost:3007
-    ports: ["3000:3000"]
+    expose: ["3000"]
 
   admin-ui:
     <<: *ui
@@ -302,7 +302,7 @@ services:
       BOOKING_UI_URL: http://localhost:3004
       GATE_UI_URL: http://localhost:3005
       BILLING_UI_URL: http://localhost:3007
-    ports: ["3001:3001"]
+    expose: ["3001"]
 
   auth-ui:
     <<: *ui
@@ -314,7 +314,7 @@ services:
         NEXT_PUBLIC_COMMON_UI_URL: http://localhost:3000
     environment:
       BACKEND_API_URL: http://gateway:4000
-    ports: ["3002:3002"]
+    expose: ["3002"]
 
   wall-ui:
     <<: *ui
@@ -325,7 +325,7 @@ services:
         NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
     environment:
       BACKEND_API_URL: http://gateway:4000
-    ports: ["3003:3003"]
+    expose: ["3003"]
 
   booking-ui:
     <<: *ui
@@ -336,7 +336,7 @@ services:
         NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
     environment:
       BACKEND_API_URL: http://gateway:4000
-    ports: ["3004:3004"]
+    expose: ["3004"]
 
   gate-ui:
     <<: *ui
@@ -347,7 +347,7 @@ services:
         NEXT_PUBLIC_AUTH_UI_URL: http://localhost:3002
     environment:
       BACKEND_API_URL: http://gateway:4000
-    ports: ["3005:3005"]
+    expose: ["3005"]
 
   public-ui:
     <<: *ui
@@ -357,7 +357,7 @@ services:
         BACKEND_API_URL: http://gateway:4000
     environment:
       BACKEND_API_URL: http://gateway:4000
-    ports: ["3006:3006"]
+    expose: ["3006"]
 
   billing-ui:
     <<: *ui
@@ -367,7 +367,42 @@ services:
         BACKEND_API_URL: http://gateway:4000
     environment:
       BACKEND_API_URL: http://gateway:4000
-    ports: ["3007:3007"]
+    expose: ["3007"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/backend-locations.conf:/etc/nginx/gr/backend-locations.conf:ro
+      - ./nginx/frontend-proxy.conf:/etc/nginx/gr/frontend-proxy.conf:ro
+    ports:
+      - "3000-3007:3000-3007"
+    depends_on:
+      gateway:
+        condition: service_healthy
+      common-ui:
+        condition: service_started
+      admin-ui:
+        condition: service_started
+      auth-ui:
+        condition: service_started
+      wall-ui:
+        condition: service_started
+      booking-ui:
+        condition: service_started
+      gate-ui:
+        condition: service_started
+      public-ui:
+        condition: service_started
+      billing-ui:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3006/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   pgdata:
