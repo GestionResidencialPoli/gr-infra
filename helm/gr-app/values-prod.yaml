@@ -28,6 +28,10 @@ contact-microservice:
     SMTP_PORT: "465"
     SMTP_FROM_NAME: Habitar
 
+nginx:
+  enabled: true
+  clusterIP: 10.43.0.81
+
 uis:
   enabled: true
   replicas: 1

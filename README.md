@@ -29,8 +29,8 @@ push a main (cualquier repo de servicio)
 
 Entrada de trafico: el tunel `gr` de cloudflared (servicio systemd en el mismo equipo) lleva
 `api.`, `auth.`, `app.`, `admin.`, `muro.`, `reservas.`, `porteria.`, `finanzas.` y el apex
-`residencialpoli.online` a Traefik, que es un `ClusterIP` fijo (`10.43.0.80`): no hay ningun puerto
-abierto en el host. `ci.residencialpoli.online` llega a Jenkins pero solo la ruta
+`residencialpoli.online` a nginx (`helm/gr-app/templates/nginx.yaml`), un `ClusterIP` fijo (`10.43.0.81`): no hay
+ningun puerto abierto en el host. Traefik (`10.43.0.80`) conserva los Ingress como respaldo. `ci.residencialpoli.online` llega a Jenkins pero solo la ruta
 `/generic-webhook-trigger/`.
 
 ### Puesta en marcha en un equipo nuevo
@@ -54,6 +54,27 @@ Maven o pnpm ademas de los servicios.
 
 Jenkins despliega con un ServiceAccount acotado al namespace `gr-app`
 (`k8s/jenkins-rbac.yaml`), nunca con cluster-admin.
+
+### nginx como proxy inverso en produccion
+
+nginx recibe todo el trafico del tunel y, segun el subdominio, sirve la UI en `/` y reenvia `/api/` al gateway
+(incluidos WebSocket y SSE) y `/graphql` al GraphQL de finanzas. Su configuracion vive en el ConfigMap `nginx`:
+
+```bash
+kubectl get configmap nginx -n gr-app -o yaml
+kubectl exec -n gr-app deploy/nginx -- nginx -T
+```
+
+Para activarlo en un servidor que ya funciona con Traefik, primero se despliega el chart y se comprueba nginx; solo
+entonces se cambia el tunel:
+
+```bash
+kubectl rollout status -n gr-app deploy/nginx
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: residencialpoli.online' http://10.43.0.81/
+./host/cloudflared/setup.sh && sudo systemctl restart cloudflared
+```
+
+Para volver atras: `ENTRADA=10.43.0.80 ./host/cloudflared/setup.sh && sudo systemctl restart cloudflared`.
 
 ## Que es publico y que no
 

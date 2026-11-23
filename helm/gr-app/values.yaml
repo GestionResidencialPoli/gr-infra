@@ -99,6 +99,17 @@ gateway:
   ingress:
     host: api.residencialpoli.online
 
+nginx:
+  enabled: false
+  replicas: 1
+  clusterIP: ""
+  image:
+    repository: nginxinc/nginx-unprivileged
+    tag: "1.27-alpine"
+  resources:
+    requests: { memory: 16Mi }
+    limits: { memory: 64Mi }
+
 uis:
   enabled: false
   replicas: 1
