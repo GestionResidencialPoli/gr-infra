@@ -1,0 +1,171 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- /*
+Aislamiento de red dentro del namespace (k3s las aplica con su controlador kube-router).
+  Internet -> cloudflared -> Traefik -> UIs y gateway
+  UIs      -> solo gateway (y DNS)
+  gateway  -> microservicios y redis
+  micros   -> user-microservice, postgres, rabbitmq (segun lo que usa cada uno)
+Todo lo demas queda denegado. Los probes del kubelet llegan desde el nodo y no se bloquean.
+*/}}
+{{- $ns := .Values.namespace }}
+{{- $uis := keys (default dict .Values.uis.services) | sortAlpha }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: {{ $ns }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+{{- if .Values.uis.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: uis-desde-traefik
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [{{ join ", " $uis }}] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: traefik }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: uis-solo-hacia-gateway
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [{{ join ", " $uis }}] }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app: gateway }
+      ports:
+        - { protocol: TCP, port: 4000 }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-desde-traefik-y-uis
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels: { app: gateway }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: traefik }
+{{- if .Values.uis.enabled }}
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [{{ join ", " $uis }}] }
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backends-desde-gateway
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [user-microservice, wall-microservice, booking-microservice, gate-microservice, billing-microservice, contact-microservice]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: gateway }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: user-microservice-desde-backends
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels: { app: user-microservice }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [wall-microservice, booking-microservice, gate-microservice, billing-microservice] }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-desde-backends
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels: { app: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values: [user-microservice, wall-microservice, booking-microservice, gate-microservice, billing-microservice, contact-microservice]
+      ports:
+        - { protocol: TCP, port: 5432 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-desde-backends
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [wall-microservice, booking-microservice, gate-microservice, billing-microservice] }
+      ports:
+        - { protocol: TCP, port: 5672 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-desde-gateway-y-wall
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels: { app: redis }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [gateway, wall-microservice] }
+      ports:
+        - { protocol: TCP, port: 6379 }
+{{- end }}
