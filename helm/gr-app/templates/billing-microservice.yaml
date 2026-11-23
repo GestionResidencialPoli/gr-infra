@@ -40,6 +40,8 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: INTERNAL_SERVICE_TOKEN } }
             - name: USER_SERVICE_URL
               value: "http://user-microservice:8080"
+            - name: COMMUNICATIONS_WS_URL
+              value: "ws://notification-microservice:4600/internal/ws"
             - name: RABBITMQ_DEFAULT_USER
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: RABBITMQ_DEFAULT_USER } }
             - name: RABBITMQ_DEFAULT_PASS

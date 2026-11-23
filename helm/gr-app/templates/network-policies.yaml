@@ -119,6 +119,23 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: notification-microservice-desde-gateway-y-backends
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels: { app: notification-microservice }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [gateway, user-microservice, wall-microservice, booking-microservice, gate-microservice, billing-microservice, contact-microservice] }
+      ports:
+        - { protocol: TCP, port: 4600 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: postgres-desde-backends
   namespace: {{ $ns }}
 spec:

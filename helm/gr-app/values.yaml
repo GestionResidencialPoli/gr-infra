@@ -89,6 +89,13 @@ billing-microservice:
     requests: { memory: 64Mi }
     limits: { memory: 180Mi }
 
+notification-microservice:
+  image:
+    tag: latest
+  resources:
+    requests: { memory: 64Mi }
+    limits: { memory: 128Mi }
+
 gateway:
   replicas: 1
   image:
