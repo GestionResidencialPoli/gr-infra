@@ -33,11 +33,17 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: JWT_ENCRYPTION_KEY } }
             - name: INTERNAL_SERVICE_TOKEN
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: INTERNAL_SERVICE_TOKEN } }
+            - name: COMMUNICATIONS_WS_URL
+              value: "ws://notification-microservice:4600/internal/ws"
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
             {{- with (index .Values "user-microservice").flywayLocations }}
             - name: SPRING_FLYWAY_LOCATIONS
               value: {{ . | quote }}
+            {{- end }}
+            {{- range $k, $v := (index .Values "user-microservice").env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
             {{- end }}
           resources:
             requests: { memory: {{ (index .Values "user-microservice").resources.requests.memory }} }

@@ -81,6 +81,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       <<: *shared-secrets
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COMMUNICATIONS_WS_URL: ws://notification-microservice:4600/internal/ws
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,6 +91,18 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  notification-microservice:
+    build: ../gr-notification-microservice
+    restart: unless-stopped
+    environment:
+      <<: *shared-secrets
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4600/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   wall-migrate:
     build:
@@ -112,6 +125,7 @@ services:
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
       USER_SERVICE_URL: http://user-microservice:8080
+      COMMUNICATIONS_WS_URL: ws://notification-microservice:4600/internal/ws
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,6 +164,7 @@ services:
       DB_NAME: gr_booking_db
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
       USER_SERVICE_URL: http://user-microservice:8080
+      COMMUNICATIONS_WS_URL: ws://notification-microservice:4600/internal/ws
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -184,6 +199,7 @@ services:
       DB_NAME: gr_gate_db
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
       USER_SERVICE_URL: http://user-microservice:8080
+      COMMUNICATIONS_WS_URL: ws://notification-microservice:4600/internal/ws
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -205,6 +221,7 @@ services:
       <<: *shared-secrets
       DATABASE_URL: postgresql+psycopg://${DB_USERNAME:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/gr_contact_db
       PORT: 4500
+      COMMUNICATIONS_WS_URL: ws://notification-microservice:4600/internal/ws
     depends_on:
       db-bootstrap:
         condition: service_completed_successfully
@@ -221,6 +238,7 @@ services:
       <<: *shared-secrets
       DATABASE_URL: postgresql+psycopg://${DB_USERNAME:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/gr_billing_db
       USER_SERVICE_URL: http://user-microservice:8080
+      COMMUNICATIONS_WS_URL: ws://notification-microservice:4600/internal/ws
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-gr}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
       BILLING_EVENTS_EXCHANGE: gr.finance.events
       PORT: 4400
@@ -249,6 +267,7 @@ services:
       GATE_SERVICE_URL: http://gate-microservice:4300
       CONTACT_SERVICE_URL: http://contact-microservice:4500
       BILLING_SERVICE_URL: http://billing-microservice:4400
+      NOTIFICATION_SERVICE_URL: http://notification-microservice:4600
     ports:
       - "${GATEWAY_PORT:-4000}:4000"
     depends_on:
