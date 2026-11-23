@@ -20,6 +20,9 @@ rabbitmq:
     limits: { memory: 256Mi }
 
 user-microservice:
+  env:
+    SPRING_PROFILES_ACTIVE: dev
+    COOKIE_SECURE: "false"
   image: { tag: local }
   resources:
     requests: { memory: 128Mi }
