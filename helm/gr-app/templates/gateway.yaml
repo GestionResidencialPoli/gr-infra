@@ -39,6 +39,8 @@ spec:
               value: "http://contact-microservice:4500"
             - name: BILLING_SERVICE_URL
               value: "http://billing-microservice:4400"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification-microservice:4600"
             - name: CORS_ALLOWED_ORIGINS
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: CORS_ALLOWED_ORIGINS } }
           resources:

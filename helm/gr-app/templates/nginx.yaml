@@ -1,0 +1,56 @@
+{{- if and .Values.nginx.enabled .Values.uis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.nginx.replicas }}
+  selector:
+    matchLabels: { app: nginx }
+  template:
+    metadata:
+      labels: { app: nginx }
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/nginx-config.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.placement.frontend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - { name: config, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf, readOnly: true }
+            - { name: config, mountPath: /etc/nginx/gr, readOnly: true }
+          resources:
+            requests: { memory: {{ .Values.nginx.resources.requests.memory }} }
+            limits: { memory: {{ .Values.nginx.resources.limits.memory }} }
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      volumes:
+        - name: config
+          configMap: { name: nginx }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: {{ .Values.namespace }}
+spec:
+  selector: { app: nginx }
+  {{- with .Values.nginx.clusterIP }}
+  clusterIP: {{ . }}
+  {{- end }}
+  ports:
+    - port: 80
+      targetPort: 8080
+{{- end }}

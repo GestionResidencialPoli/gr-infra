@@ -36,7 +36,7 @@ kubectl wait --namespace ingress-nginx \
   --timeout=180s
 
 declare -A MIGRATE_REPOS=( [gr-wall-microservice]=1 [gr-booking-microservice]=1 [gr-gate-microservice]=1 )
-BACKEND_REPOS=(gr-user-microservice gr-wall-microservice gr-booking-microservice gr-gate-microservice gr-contact-microservice gr-billing-microservice gr-api-gateway)
+BACKEND_REPOS=(gr-user-microservice gr-notification-microservice gr-wall-microservice gr-booking-microservice gr-gate-microservice gr-contact-microservice gr-billing-microservice gr-api-gateway)
 
 echo "==> Construyendo imagenes de backend"
 for repo in "${BACKEND_REPOS[@]}"; do

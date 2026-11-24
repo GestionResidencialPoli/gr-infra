@@ -6,6 +6,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOMAIN=residencialpoli.online
 TUNNEL=gr
+ENTRADA="${ENTRADA:-10.43.0.81}"
 HOSTS=("$DOMAIN" api auth app admin muro reservas porteria finanzas)
 CI_HOST="ci.$DOMAIN"
 
@@ -24,7 +25,7 @@ CFG="$HOME/.cloudflared/config.yml"
   for h in "${HOSTS[@]}"; do
     fq="$h"; [ "$h" = "$DOMAIN" ] || fq="$h.$DOMAIN"
     echo "  - hostname: $fq"
-    echo "    service: http://10.43.0.80:80"
+    echo "    service: http://$ENTRADA:80"
   done
   echo "  - service: http_status:404"
 } > "$CFG"
